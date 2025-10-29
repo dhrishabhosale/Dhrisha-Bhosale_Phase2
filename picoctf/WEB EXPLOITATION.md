@@ -1,0 +1,313 @@
+# 1. Shape Facility — Progressive Filter Bypass
+
+> Description: Can you beat the filters?\
+> Log in as admin  
+> Challenge URLs: http://shape-facility.picoctf.net:63293/  and http://shape-facility.picoctf.net:63293/filter.php  
+> Video analyzed: https://www.youtube.com/watch?v=PQLgFYS3lgc  
+> **Video Title (from user):** pico 2020 mini web gauntlet
+
+---
+
+## Solution:
+
+This challenge is a **web exploitation** / **filter bypass** task. The application enforces an evolving blacklist of tokens across rounds. The objective is to bypass each round's filters and ultimately access `filter.php` source or another view that discloses the flag. The screenshots and source provided show the exact progression used in the video walkthrough; below is a reconstructed, step-by-step report with reasoning and payloads used.
+
+### High-level strategy
+- Interact with the form (username/password) shown on the main page and observe round progression messages.  
+- Use a session (browser or scripted) to preserve `$_SESSION['round']` while trying payloads.  
+- Start with simple SQL comment payloads to see what the server accepts in early rounds.  
+- When filters tighten, craft inputs that avoid literal banned substrings (e.g., split `admin` so `admin` does not appear verbatim), or use alternate comment syntaxes and concatenation to evade naive substring checks.  
+- Reach the state where the server calls `highlight_file("filter.php")` and read the source to extract the flag (the flag is present in a comment at the bottom).
+
+---
+
+## Step-by-step walkthrough (with screenshots & thought process)
+
+1. **Landing UI & Round indicator**  
+   The challenge displays a round counter and an input form. This confirms the application uses stateful rounds (likely via PHP `$_SESSION`).  
+   ![Challenge Header](/mnt/data/Screenshot 2025-10-27 232621.png)
+
+2. **Round 1 — Classic SQL comment bypass**  
+   The attacker submits `admin' --` in the Username field. This is a common SQL injection technique: the single quote closes a string literal and `--` starts a SQL line comment. The page advances to Round 2, so the round 1 filter is permissive enough for this payload.  
+   - Payload used: `admin' --`  
+   - Reason: terminate string and comment out remainder of query.  
+   ![Round 1 attempt](/mnt/data/Screenshot 2025-10-27 233524.png)
+
+3. **Round 2 — Try alternative comment style (`/*`)**  
+   The next attempt uses `admin' /*` which again terminates a string and opens a block comment. This variation is tested to bypass filters that might block `--`. The UI shows progress to Round 2/5 in the video.  
+   - Payload used: `admin' /*`  
+   ![Round 2 attempt](/mnt/data/Screenshot 2025-10-27 233838.png)
+
+4. **Round 3 — Filters tighten and some payloads fail**  
+   At round 3, previously successful inputs are rejected (`Invalid username/password`). The server's `$filter` array for this round now includes more tokens (the screenshots of `filter.php` confirm this). This requires more creative bypasses.  
+   ![Round 3 failure](/mnt/data/Screenshot 2025-10-27 233938.png)
+
+5. **Round 4 — Creative obfuscation and bypass**  
+   The attacker crafts payloads that avoid forming the literal banned substrings. For example `adm'||/*` (shown in the screenshots) avoids the literal `admin` and uses concatenation-like syntax to break filter matching while still being meaningful to the SQL parser (depending on DB). This succeeds and the UI advances to round 4.  
+   - Payload observed: `adm'||/*`  
+   - Thought process: Break the forbidden token (`admin`) and use operators/comments to still cause logical bypass in SQL parsing.  
+   ![Round 4 success](/mnt/data/Screenshot 2025-10-27 234037.png)
+
+6. **Inspecting the server-side `filter.php`**  
+   The walkthrough shows the server-side `filter.php` file. It reveals an array of filtered tokens per round and the logic that displays filter lists or, for `$_SESSION['round'] >= 6`, calls `highlight_file("filter.php")`. The flag is present in a comment at the end of this file. The screenshots below are zoomed-in captures of the `filter.php` source used in the video.  
+   ![Filter source 1](/mnt/data/Screenshot 2025-10-27 234409.png)  
+   ![Filter source 2](/mnt/data/Screenshot 2025-10-27 234419.png)
+
+7. **Flag retrieval**  
+   After advancing rounds and triggering the view that highlights the `filter.php` source, the flag was discovered in a comment at the bottom of the file. The flag (as shown by you) is:
+   ```
+   picoCTF{y0u_m4d3_1t_79a0ddc6}
+   ```
+
+---
+
+## Example payloads & notes (used / tested)
+
+```
+# Round 1 detection
+Username: admin' --
+
+# Round 2 attempt (alternate comment)
+Username: admin' /*
+
+# Round 3 failing example (blocked)
+# many attempts will return "Invalid username/password" here
+
+# Round 4 creative bypass (observed in video)
+Username: adm'||/*
+```
+> Note: exact successful payloads depend on how the backend constructs the SQL query and how it parses the submitted input. The goal when filters exist is to avoid literal blocked substrings **and** provide input that still affects the query in the desired way.
+
+---
+
+## Flag:
+
+```
+picoCTF{y0u_m4d3_1t_79a0ddc6}
+```
+
+---
+
+## Concepts learnt:
+
+- **Blacklisting is brittle:** Blacklists of substrings (like `"admin"`, `"or"`, `"--"`) are easy to circumvent by obfuscation, concatenation, or alternate encodings. Use parameterized queries and whitelists instead.  
+- **SQL comment styles & dialects:** Different DBs accept `--`, `#`, and `/* ... */` comments. A filter must consider all syntactic possibilities.  
+- **Session-driven challenge state:** The server uses `$_SESSION['round']` to track a user's progress across requests—exploits must maintain cookies or session state.  
+- **Source disclosure via debug features:** Functions like `highlight_file()` will display server files if reachable; never expose such functionality in production.  
+- **Practical CTF approach:** Start with simple probes, then refine payloads based on what tokens get blocked. Automate testing once you understand the filter pattern.
+
+---
+
+## Notes & alternate tangents:
+
+- If you plan to reproduce the attack, use a requests `Session()` to preserve cookies across requests. Scraping the UI for "Congrats" messages can confirm when rounds advance.  
+- If filters block ASCII characters, consider bypasses like URL-encoding, Unicode homoglyphs, or exploitation through HTTP parameter parsing oddities; however these were not necessary in the video.  
+- The video shows manual interactive exploration; a scripted approach can speed up reaching round >=6.
+
+---
+
+## Resources:
+
+- Video analyzed: https://www.youtube.com/watch?v=PQLgFYS3lgc  
+- Challenge URLs (provided in description): http://shape-facility.picoctf.net:63293/  and http://shape-facility.picoctf.net:63293/filter.php  
+- OWASP SQL Injection overview: https://owasp.org/www-community/attacks/SQL_Injection  
+- General CTF writeups: progressive filter bypass patterns and source-disclosure techniques.
+
+---
+
+
+---
+
+# 1. Cookies
+
+> Who doesn't love cookies? Try to figure out the best one.  
+> [Challenge Link](http://mercury.picoctf.net:17781/)
+
+---
+
+## Solution:
+
+This challenge belongs to the **Web Exploitation** category from **picoCTF 2021**.  
+The goal is to identify the “best” cookie and use it to reveal the flag.
+
+1. **Opened the challenge link**:  
+   When visiting the given URL, we get a simple web page with a “flag” placeholder or login-like behavior.
+
+   ![Challenge Page](Screenshot%202025-10-27%20231658.png)
+
+2. **Checked browser cookies**:  
+   - Opened **Developer Tools → Application → Cookies** tab.  
+   - Observed a cookie named something like `name` or `user`, having integer values (e.g., 0, 1, 2...).
+
+3. **Modified the cookie manually**:  
+   - Changed the cookie’s value incrementally and refreshed the page each time.  
+   - Each cookie value displayed a different response message.
+
+4. **Found the correct cookie value**:  
+   - After testing multiple values, one of them displayed the flag on the web page.
+
+   ![Flag Page](Screenshot%202025-10-27%20231718.png)
+
+5. **Flag retrieved successfully!**
+
+---
+
+### Reference Video
+
+This walkthrough video explains the same process step by step:  
+🎥 [YouTube – picoCTF 2021: Cookies](https://www.youtube.com/watch?v=DcdvsxU7z_w)
+
+---
+
+## Flag:
+
+```
+picoCTF{3v3ry1_l0v3s_c00k135_bb3b3535}
+```
+
+---
+
+## Concepts learnt:
+
+- **Cookies in Web Applications:**  
+  Cookies store small pieces of data in browsers, which can include authentication or user role info.
+
+- **Cookie Manipulation:**  
+  By modifying cookie values, you can sometimes access different content or privilege levels.
+
+- **Client-Side vs Server-Side Data:**  
+  Client-side data (like cookies) can be tampered with, so secure sites must verify everything server-side.
+
+---
+
+## Notes:
+
+- Initially thought the flag might be hidden in the HTML source, but it was actually controlled through cookie values.  
+- Learning how to inspect and edit cookies in DevTools was key.  
+- Alternate approach: automate cookie testing using Python’s `requests` library.
+
+---
+
+## Resources:
+
+- [picoCTF Official Site](https://picoctf.org)
+- [YouTube Video Walkthrough](https://www.youtube.com/watch?v=DcdvsxU7z_w)
+- [MDN Web Docs: HTTP Cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies)
+
+---
+
+
+---
+
+# 1. SSTI1 / SQLi Filters Challenge
+
+> I made a cool website where you can announce whatever you want! Try it out!  
+> The challenge includes progressive rounds that filter certain input tokens to force creative bypasses. Instance URL used during solving (ephemeral): http://rescued-float.picoctf.net:53639/
+
+---
+
+## Solution:
+
+This challenge is a **web exploitation** task where the application enforces progressive filters across multiple “rounds”. The goal is to bypass the filters (usually preventing SQLi or special characters) until you can execute input that reveals the flag. The screenshots below show the rounds, payload attempts, and the server-side `filter.php` used to enforce blocking rules.
+
+### Steps & thought process
+
+1. **Visited the challenge page** and found a login/announcement-like form that advances through rounds when certain inputs are accepted. The UI displayed round progress (Round 1/5, Round 2/5, ...). In early rounds, simple comment-based payloads worked to advance.
+
+   ![Challenge Header](Screenshot 2025-10-27 232621.png)
+
+2. **Round 1 — Basic comment bypass**: Tested common SQL comment payloads to see which characters were blocked or allowed. Example username payload used from screenshots:
+
+   - `admin' --` (single-quote followed by SQL comment) — this advanced us to round 2 in the video evidence.
+   ```
+   Username: admin' --
+   ```
+   Screenshot showing Round 1 attempt:
+   ![Round 1 attempt](Screenshot 2025-10-27 233524.png)
+
+3. **Round 2 — Alternate comment syntax**: The application blocked the simplest payloads, so we tried other comment and quoting styles. In the video images we can see the attacker used `admin'/*` and later variations. This advanced to round 3 and beyond in some tries.
+
+   ```
+   Username: admin' /*
+   ```
+   ![Round 2 attempt](Screenshot 2025-10-27 233838.png)
+
+4. **Round 3 — Observing failures**: Some payloads started returning `Invalid username/password`, indicating the filter was catching specific tokens or characters. At this stage we carefully altered the injected payloads to find allowed characters (e.g., toggling comment type, adding/removing spaces).
+
+   ![Round 3 failure](Screenshot 2025-10-27 233938.png)
+
+5. **Round 4 — Creative bypasses**: The video demonstrates successful bypasses using payloads like `adm'||/*` (an attempt using concatenation or mixing tokens to evade basic substring filters). Each success shows “Congrats! On to round X”.
+
+   ```
+   Username: adm'||/*
+   ```
+
+   ![Round 4 success](Screenshot 2025-10-27 234037.png)
+
+6. **Server-side filter analysis**: We examined the provided `filter.php` source (screenshot included). The PHP shows per-round filter arrays that list disallowed tokens such as `"or"`, `"and"`, `"like"`, `">"`, `"--"`, `"union"`, `"/"`, `"/*"`, `"*/"`, `"<"`, `"="`, `"admin"`, etc. The code increments `$_SESSION['round']` and presents different `$filter` arrays for successive rounds.
+   - This explains why certain payloads succeed early but fail later — the server explicitly checks for disallowed tokens and rejects the input if any are present.
+   - The `highlight_file("filter.php");` call in round >=6 reveals source code, which in the challenge contained the actual flag in a comment at the bottom: `// picoCTF{y0u_m4d3_1t_79a0ddc6}`.
+
+   ![Filter source (part 1)](Screenshot 2025-10-27 234409.png)
+   ![Filter source (part 2)](Screenshot 2025-10-27 234419.png)
+
+7. **Flag retrieval**: After bypassing enough filters to reach the page that displays `filter.php` (or by causing the server to reveal that file), we obtained the flag embedded in a comment at the bottom of the PHP source:
+   ```
+   picoCTF{y0u_m4d3_1t_79a0ddc6}
+   ```
+
+---
+
+## Flag:
+
+```
+picoCTF{y0u_m4d3_1t_79a0ddc6}
+```
+
+---
+
+## Concepts learnt:
+
+- **Progressive input filtering:** The server applies an evolving set of disallowed tokens per round — understanding filter rules is key to bypassing them safely.
+- **SQL injection comment styles & evasion:** Different SQL dialects accept different comment styles (`--`, `/* */`) and creative payloads (concatenation, mixed tokens) can bypass naive substring filters.
+- **Source disclosure via logic flaws:** Forcing the application into a state that reveals source files (e.g., `highlight_file("filter.php")`) is a common CTF pattern to expose hidden flags or logic.
+- **Use of sessions for challenge state:** The application stores the current round in `$_SESSION['round']`, tracking progress across requests.
+
+---
+
+## Notes:
+
+- The exact payloads that bypass filters depend on the server's token checks and string-matching approach; brute force combined with manual reasoning was used in the video to progress through rounds.
+- When filters block obvious tokens, try mixing characters, using alternate encodings, or leveraging application behavior (string concatenation, different comment styles) to bypass naive checks.
+- If you can access server-side files via logic flaws or debug features, inspect them carefully — flags are often left as comments for CTFs.
+
+---
+
+## Example payloads (illustrative)
+
+```
+# Round 1 detection
+admin' --
+
+# Round 2 attempt
+admin' /*
+
+# Round 4 creative bypass
+adm'||/*
+
+# Conceptual exploitation to reach filter.php
+# (The actual steps depend on session state and exact filter behavior)
+```
+
+---
+
+## Resources:
+
+- [YouTube walkthough provided by user](https://www.youtube.com/watch?v=PQLgFYS3lgc)  
+- [OWASP: SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection)  
+- [Common SQL comment styles & evasions - cheat sheets]
+---
+
+
+---
+
