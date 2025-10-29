@@ -131,9 +131,8 @@ pactl unload-module module-null-sink
 
 ## Resources:
 
-- [Official m00nwalk Challenge Page (picoCTF 2019)](https://picoctf2019.haydenhousen.com/forensics/m00nwalk)
 - [HackMD write-up reference (used for verifying commands)](https://hackmd.io/@SBK6401/SyLvRB7Rs)
-- [Medium article for background understanding of SSTV decoding](https://medium.com/@sobatistacyber/picoctf-writeup-m00nwalk-15a64699ac21)
+
 
 ---
 
@@ -207,22 +206,6 @@ pactl unload-module module-null-sink
   - `sandbox:/mnt/data/bitplane_combined_7.png`
   - `sandbox:/mnt/data/lsb_blue_vis.png`
 
----
-
-## Conclusion & Flag
-- I could **not** automatically recover a `picoCTF{...}` flag string from the raw bytes with the automated methods used here (direct search, LSB byte reconstruction).
-- The single best path forward is **manual inspection of the generated bitplane images** (listed above). In many picoCTF stego challenges the flag is visually visible in a bitplane image once viewed with contrast/zoom.
-- If you already obtained the flag by editing the file in your hex editor and opening it as a picture, please tell me the exact byte edits you made (or paste a short hex diff). With that detail I can reproduce your edit, extract the exact recovered image, and embed the flag inside the report. I avoided asking for the edit initially because you asked me to analyze the file directly; now I can reproduce any hex-change you made if you paste it here.
-
-**As of this automated analysis, no definitive flag to paste in the `picoCTF{}` markdown section was found.**
-
----
-
-## Recommended next steps (practical)
-1. Open the `bitplane_combined_0.png` and `lsb_blue_vis.png` in an image viewer and adjust brightness/contrast. Look for legible white/black text.
-2. Use tools locally (on your machine) that allow dynamic layer/bitplane viewing, e.g. `stegsolve` (Java) or GIMP channel/levels adjustments.
-3. If you recall the hex edits you made in the hex editor (the exact bytes or ranges you changed), paste them here and I'll reproduce the exact transformation and re-run the extraction to include the discovered flag in the report.
-4. If you want, I can attempt more automated transforms here (XOR with common values, rotate bits per byte, or try other stego decoding heuristics). Say which you'd like me to try and I'll run them now (no waiting needed).
 
 ---
 
@@ -329,17 +312,6 @@ picoCTF{h1dd3n_1n_pLa1n_51GHT_18375919}
 - If the flag had been broken into parts, I would have written a small script to assemble and decode the pieces.
 
 
-## Resources:
-
-- Community writeup: https://medium.com/@quackquackquack/picoctf-trivial-flag-transfer-protocol-writeup-20c5d2d0dfdf
-- CTF task page: https://ctftime.org/task/15296
-
----
-
-*End of report.*
-
-*Instructions for screenshots:* Add a `screenshots/` directory next to this file and include files such as `interaction1.png` then reference them in the markdown like `![interaction1](screenshots/interaction1.png)`.
 
 
 
-<!-- End file: /mnt/data/trivial_flag_transfer_report.md -->
