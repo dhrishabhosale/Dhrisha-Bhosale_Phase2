@@ -134,8 +134,6 @@ picoCTF{jU5t_a_s1mpl3_an4gr4m_4_u_79958f}
 ## Resources:
 
 - Challenge source (present in problem statement): `VaultDoor3.java`  
-- Community writeup: [picoCTF writeups — Vault Door 3 (Medium)](https://medium.com/@sobatistacyber/picoctf-writeups-vault-door-3-86f9d578f87e)  
-- picoCTF original challenge set (reference/general) — `picoctf.org` (search for VaultDoor3)
 
 ---
 
@@ -590,16 +588,5 @@ picoCTF{549698}
   - Not setting Intel syntax and getting confused by AT&T syntax
   - Checking register value at the wrong point in execution
 
-## Resources:
-
-- [GDB Official Documentation](https://www.gnu.org/software/gdb/documentation/)
-- [x86-64 Instruction Reference](https://www.felixcloutier.com/x86/)
-- [GDB Cheat Sheet](https://darkdust.net/files/GDB%20Cheat%20Sheet.pdf)
-- [Intel vs AT&T Syntax Guide](https://staffwww.fullcoll.edu/aclifton/courses/cs241/syntax.html)
-- [x86 Calling Conventions](https://en.wikipedia.org/wiki/X86_calling_conventions)
-- [Original Writeup - Medium](https://medium.com/@Oscar404/cracking-picoctf-challenge-gdb-baby-step-1-2d77e8eab818)
-- [PicoCTF Platform](https://play.picoctf.org/)
-- [ELF Format Explained](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)
-- [Introduction to x86-64 Assembly](https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf)
 
 ***
