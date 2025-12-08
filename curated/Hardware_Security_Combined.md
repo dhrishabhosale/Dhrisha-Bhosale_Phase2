@@ -853,9 +853,7 @@ By grouping transistors and tracing current paths, we identified standard logic 
 - OR gates
 - An XOR gate at the final stage (not immediately obvious)
 
-Below is the reduced logic representation derived from the schematic:
 
-![Logic Reduction](https://github.com/user-attachments/assets/8acb1855-fdcf-4abd-a02b-572d1bd74caf)
 
 From this analysis, the full Boolean logic was derived as:
 
